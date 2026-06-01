@@ -10,8 +10,8 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'xcb')
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from PyQt5.QtWidgets import QApplication, QDialog, QMessageBox
-from PyQt5.QtCore import QTimer
+from PyQt6.QtWidgets import QApplication, QDialog, QMessageBox
+from PyQt6.QtCore import QTimer
 
 import config as cfg
 import autostart
@@ -24,8 +24,10 @@ def prompt_autostart():
     msg = QMessageBox()
     msg.setWindowTitle('Launch on startup?')
     msg.setText('Would you like MA Sidebar to launch automatically when you log in?')
-    msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-    msg.setDefaultButton(QMessageBox.Yes)
+    msg.setStandardButtons(
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+    )
+    msg.setDefaultButton(QMessageBox.StandardButton.Yes)
     msg.setStyleSheet("""
         QMessageBox { background-color: #0d0d18; color: #e2e2f0; }
         QLabel { color: #e2e2f0; font-size: 13px; }
@@ -39,7 +41,7 @@ def prompt_autostart():
         }
         QPushButton:hover { background: rgba(255,255,255,0.09); border-color: #3a3a55; }
     """)
-    if msg.exec_() == QMessageBox.Yes:
+    if msg.exec() == QMessageBox.StandardButton.Yes:
         autostart.enable()
 
 
@@ -51,9 +53,9 @@ def main():
     # ── first run ────────────────────────────────────────────
     if not cfg.has_url():
         dialog = SetupDialog()
-        if dialog.exec_() == QDialog.Accepted:
-            config         = cfg.load()
-            config['url']  = dialog.get_result()
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            config        = cfg.load()
+            config['url'] = dialog.get_result()
             cfg.save(config)
             prompt_autostart()
         else:
@@ -82,7 +84,7 @@ def main():
     timer.timeout.connect(process_commands)
     timer.start(100)
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

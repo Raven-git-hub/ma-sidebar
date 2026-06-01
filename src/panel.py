@@ -1,19 +1,20 @@
 from urllib.parse import urlparse
 
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout,
-    QPushButton, QLabel, QDialog
+    QPushButton, QLabel, QStackedWidget, QDialog
 )
-from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineProfile, QWebEnginePage
-from PyQt5.QtCore import Qt, QUrl, QTimer
+from PyQt6.QtWebEngineWidgets import QWebEngineView
+from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage
+from PyQt6.QtCore import Qt, QUrl, QTimer
 
 import config as cfg
 from theme import get_accent_colour, accent_dim
 
 PANEL_WIDTH = 840
 
-# JavaScript navigation lock — intercepts MA's SPA routing
-# and redirects back to the configured URL if the user strays
+# JavaScript nav lock — intercepts MA's SPA routing and redirects
+# back to the configured URL if the user navigates elsewhere
 NAV_LOCK_JS = """
 (function() {{
     const allowed = '{path}';
@@ -34,7 +35,6 @@ NAV_LOCK_JS = """
 
 
 def build_style(accent):
-    dim = accent_dim(accent)
     return f"""
     QWidget {{
         background-color: #0d0d18;
@@ -89,16 +89,16 @@ class LoadingPage(QWidget):
 
     def _build(self):
         layout = QVBoxLayout()
-        layout.setAlignment(Qt.AlignCenter)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.setSpacing(12)
 
         self.spinner = QLabel(self.FRAMES[0])
         self.spinner.setStyleSheet(f'color: {self._accent}; font-size: 32px;')
-        self.spinner.setAlignment(Qt.AlignCenter)
+        self.spinner.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         msg = QLabel('Connecting to Music Assistant…')
         msg.setStyleSheet('color: #7b7b99; font-size: 12px;')
-        msg.setAlignment(Qt.AlignCenter)
+        msg.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         layout.addWidget(self.spinner)
         layout.addWidget(msg)
@@ -121,19 +121,19 @@ class LoadingPage(QWidget):
 class SidebarPanel(QWidget):
     def __init__(self, screen):
         super().__init__()
-        self.screen  = screen
-        self.config  = cfg.load()
-        self.accent  = get_accent_colour()
-        self.url     = self.config.get('url', '')
+        self.screen = screen
+        self.config = cfg.load()
+        self.accent = get_accent_colour()
+        self.url    = self.config.get('url', '')
         self._build()
 
     def _build(self):
         geo = self.screen.geometry()
 
         self.setWindowFlags(
-            Qt.Tool                |
-            Qt.FramelessWindowHint |
-            Qt.WindowStaysOnTopHint
+            Qt.WindowType.Tool                |
+            Qt.WindowType.FramelessWindowHint |
+            Qt.WindowType.WindowStaysOnTopHint
         )
         self.setGeometry(
             geo.width() - PANEL_WIDTH, 0,
@@ -158,7 +158,7 @@ class SidebarPanel(QWidget):
 
         close_btn = QPushButton('✕')
         close_btn.setFixedSize(26, 26)
-        close_btn.setCursor(Qt.PointingHandCursor)
+        close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         close_btn.clicked.connect(self.hide)
         header.addWidget(close_btn)
 
@@ -171,23 +171,20 @@ class SidebarPanel(QWidget):
         separator.setStyleSheet('background-color: #2a2a3d;')
 
         # ── webview stack ────────────────────────────────────
-        from PyQt5.QtWidgets import QStackedWidget
         self.stack = QStackedWidget()
 
         self.loading = LoadingPage(self.accent)
         self.stack.addWidget(self.loading)
 
-        profile  = QWebEngineProfile('ma-sidebar', self)
-        page     = LockedWebPage(self.url, profile, self)
+        profile      = QWebEngineProfile('ma-sidebar', self)
+        page         = LockedWebPage(self.url, profile, self)
         self.webview = QWebEngineView()
         self.webview.setPage(page)
         self.stack.addWidget(self.webview)
 
         self.stack.setCurrentIndex(0)
 
-        # Switch to webview once loaded
         self.webview.loadFinished.connect(self._on_load_finished)
-
         self.webview.load(QUrl(self.url))
 
         # ── layout ───────────────────────────────────────────
@@ -203,8 +200,8 @@ class SidebarPanel(QWidget):
         if ok:
             self.stack.setCurrentIndex(1)
             # Inject JS nav lock
-            parsed   = urlparse(self.url)
-            js       = NAV_LOCK_JS.format(path=parsed.path)
+            parsed = urlparse(self.url)
+            js     = NAV_LOCK_JS.format(path=parsed.path)
             self.webview.page().runJavaScript(js)
             # Disable horizontal scroll
             self.webview.page().runJavaScript(
@@ -233,5 +230,5 @@ class SidebarPanel(QWidget):
             self.activateWindow()
 
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Escape:
+        if event.key() == Qt.Key.Key_Escape:
             self.hide()
