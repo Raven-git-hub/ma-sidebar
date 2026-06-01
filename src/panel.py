@@ -13,8 +13,7 @@ from theme import get_accent_colour
 
 PANEL_WIDTH = 840
 
-# JavaScript nav lock — intercepts MA's SPA routing and redirects
-# back to the configured URL if the user navigates elsewhere
+# JavaScript nav lock
 NAV_LOCK_JS = """
 (function() {{
     const allowed = '{path}';
@@ -33,18 +32,15 @@ NAV_LOCK_JS = """
 }})();
 """
 
-# Traverses shadow DOM to find and hide MA's sidebar toggle button
-HIDE_SIDEBAR_BTN_JS = """
+# Hide MA's entire header bar (hamburger + title)
+HIDE_HEADER_JS = """
 (function() {
-    function hideButton() {
+    function hideHeader() {
         function walk(root) {
-            const el = root.querySelector('ha-button[aria-label="Sidebar toggle"]');
+            const el = root.querySelector('div.header');
             if (el) {
-                const host = el.getRootNode().host;
-                if (host) {
-                    host.style.setProperty('display', 'none', 'important');
-                    return true;
-                }
+                el.style.setProperty('display', 'none', 'important');
+                return true;
             }
             for (const child of root.querySelectorAll('*')) {
                 if (child.shadowRoot && walk(child.shadowRoot)) return true;
@@ -53,8 +49,8 @@ HIDE_SIDEBAR_BTN_JS = """
         }
         walk(document);
     }
-    hideButton();
-    const observer = new MutationObserver(hideButton);
+    hideHeader();
+    const observer = new MutationObserver(hideHeader);
     observer.observe(document.body, { childList: true, subtree: true });
     setTimeout(() => observer.disconnect(), 10000);
 })();
@@ -88,7 +84,6 @@ def build_style(accent):
 
 
 class LockedWebPage(QWebEnginePage):
-    """Blocks main-frame navigation outside the configured MA URL."""
     def __init__(self, instance_url, profile, parent=None):
         super().__init__(profile, parent)
         parsed = urlparse(instance_url)
@@ -179,9 +174,7 @@ class SidebarPanel(QWidget):
         icon_lbl.setFixedWidth(24)
         header.addWidget(icon_lbl)
 
-        title_lbl = QLabel('Music Assistant')
-        title_lbl.setStyleSheet('color: #e2e2f0; font-size: 12px; font-weight: bold;')
-        header.addWidget(title_lbl, 1)
+        header.addStretch()
 
         close_btn = QPushButton('✕')
         close_btn.setFixedSize(26, 26)
@@ -230,8 +223,8 @@ class SidebarPanel(QWidget):
             parsed = urlparse(self.url)
             js     = NAV_LOCK_JS.format(path=parsed.path)
             self.webview.page().runJavaScript(js)
-            # Hide sidebar toggle button
-            self.webview.page().runJavaScript(HIDE_SIDEBAR_BTN_JS)
+            # Hide MA's header bar entirely
+            self.webview.page().runJavaScript(HIDE_HEADER_JS)
             # Disable horizontal scroll
             self.webview.page().runJavaScript(
                 "document.documentElement.style.overflowX = 'hidden';"
