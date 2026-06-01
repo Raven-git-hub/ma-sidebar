@@ -9,7 +9,7 @@ from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage
 from PyQt6.QtCore import Qt, QUrl, QTimer
 
 import config as cfg
-from theme import get_accent_colour, accent_dim
+from theme import get_accent_colour
 
 PANEL_WIDTH = 840
 
@@ -33,15 +33,18 @@ NAV_LOCK_JS = """
 }})();
 """
 
-# Traverses shadow DOM to hide MA's sidebar toggle button
+# Traverses shadow DOM to find and hide MA's sidebar toggle button
 HIDE_SIDEBAR_BTN_JS = """
 (function() {
     function hideButton() {
         function walk(root) {
-            const el = root.querySelector('ha-icon-button[aria-label="Sidebar toggle"]');
+            const el = root.querySelector('ha-button[aria-label="Sidebar toggle"]');
             if (el) {
-                el.style.setProperty('display', 'none', 'important');
-                return true;
+                const host = el.getRootNode().host;
+                if (host) {
+                    host.style.setProperty('display', 'none', 'important');
+                    return true;
+                }
             }
             for (const child of root.querySelectorAll('*')) {
                 if (child.shadowRoot && walk(child.shadowRoot)) return true;
