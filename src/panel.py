@@ -33,6 +33,30 @@ NAV_LOCK_JS = """
 }})();
 """
 
+# Traverses shadow DOM to hide MA's sidebar toggle button
+HIDE_SIDEBAR_BTN_JS = """
+(function() {
+    function hideButton() {
+        function walk(root) {
+            const el = root.querySelector('ha-icon-button[aria-label="Sidebar toggle"]');
+            if (el) {
+                el.style.setProperty('display', 'none', 'important');
+                return true;
+            }
+            for (const child of root.querySelectorAll('*')) {
+                if (child.shadowRoot && walk(child.shadowRoot)) return true;
+            }
+            return false;
+        }
+        walk(document);
+    }
+    hideButton();
+    const observer = new MutationObserver(hideButton);
+    observer.observe(document.body, { childList: true, subtree: true });
+    setTimeout(() => observer.disconnect(), 10000);
+})();
+"""
+
 
 def build_style(accent):
     return f"""
@@ -203,6 +227,8 @@ class SidebarPanel(QWidget):
             parsed = urlparse(self.url)
             js     = NAV_LOCK_JS.format(path=parsed.path)
             self.webview.page().runJavaScript(js)
+            # Hide sidebar toggle button
+            self.webview.page().runJavaScript(HIDE_SIDEBAR_BTN_JS)
             # Disable horizontal scroll
             self.webview.page().runJavaScript(
                 "document.documentElement.style.overflowX = 'hidden';"
